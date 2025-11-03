@@ -1,0 +1,10 @@
+{
+  "name": "mcp-search-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "cli": "bun run bin/search-cli.ts",
+    "test": "bun test"
+  }
+}

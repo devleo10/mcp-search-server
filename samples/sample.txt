@@ -1,0 +1,4 @@
+This is a sample file.
+It contains a keyword on this line: keyword
+Another line with Keyword to test case.
+End of sample.
