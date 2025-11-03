@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { writeFile, unlink } from 'fs/promises';
-import { searchFile } from '../search';
+import { searchFile } from '../src/search';
 
 test('searchFile finds matches and respects options', async () => {
   const tmp = 'tests_tmp.txt';

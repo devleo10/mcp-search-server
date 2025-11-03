@@ -1,3 +1,20 @@
+# MCP Search Server (TypeScript + Bun)
+
+Minimal MCP-style search server and CLI written in TypeScript and targeted at Bun runtime. Use the `src/` implementations.
+
+Quick start (PowerShell):
+
+```powershell
+# Install Bun (example): scoop install bun
+bun install
+bun run start
+
+# CLI example
+bun run cli -- samples/sample.txt keyword -i
+
+# Run tests
+bun test
+```
 # MCP Search Server
 
 Minimal Bun + TypeScript example search server and CLI.
