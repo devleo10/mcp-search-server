@@ -55,16 +55,35 @@ export WORKSPACE_ROOT=/path/to/project
   "mcpServers": {
     "search-server": {
       "command": "bun",
-      "args": ["run", "D:\\WEBD\\mcp-search-server\\src\\server.ts"],
-      "cwd": "D:\\WEBD\\mcp-search-server",
+      "args": ["run", "/path/to/mcp-search-server/src/server.ts"],
+      "cwd": "/path/to/mcp-search-server",
       "env": {
         "MCP_TRANSPORT": "stdio",
-        "WORKSPACE_ROOT": "D:\\WEBD\\mcp-search-server"
+        "WORKSPACE_ROOT": "/path/to/mcp-search-server"
       }
     }
   }
 }
 ```
+
+**Windows example** (use double backslashes):
+```json
+{
+  "mcpServers": {
+    "search-server": {
+      "command": "bun",
+      "args": ["run", "C:\\path\\to\\mcp-search-server\\src\\server.ts"],
+      "cwd": "C:\\path\\to\\mcp-search-server",
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "WORKSPACE_ROOT": "C:\\path\\to\\mcp-search-server"
+      }
+    }
+  }
+}
+```
+
+**Note**: Replace `/path/to/mcp-search-server` with your actual project directory path.
 
 3) Restart Cursor and ask:
 - “What MCP tools are available?” → should list `search_file`
