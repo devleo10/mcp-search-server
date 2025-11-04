@@ -1,107 +1,61 @@
 # MCP Search Server
 
-A **Model Context Protocol (MCP) server** that provides file search capabilities to AI assistants like Claude Desktop and Cursor. Search files for keywords, patterns, or regular expressions with context lines and flexible options.
+A minimal, fast Model Context Protocol (MCP) server that exposes a single tool: `search_file` for searching within files. Designed to work with Cursor and Claude Desktop, plus a small CLI for direct use.
 
-## Tech Stack
+**Repository**: [https://github.com/devleo10/mcp-search-server](https://github.com/devleo10/mcp-search-server)
 
-- **Runtime**: [Bun](https://bun.sh/) - Fast JavaScript runtime and package manager
-- **Language**: TypeScript - Type-safe JavaScript
-- **MCP SDK**: `@modelcontextprotocol/sdk` v1.21.0 - Official MCP protocol implementation
-- **HTTP Server**: Express v5.1.0 - Web server for HTTP transport mode
-- **Protocol**: JSON-RPC 2.0 - Standard RPC protocol used by MCP
+## Tech stack
 
-## What is MCP?
+- Bun (runtime + package manager)
+- TypeScript
+- `@modelcontextprotocol/sdk` v1.21.0 (official MCP SDK)
+- Express 5 (HTTP mode)
+- JSON-RPC 2.0 (protocol)
 
-**Model Context Protocol** connects AI clients (like Claude Desktop, Cursor) with servers that provide tools and resources:
+## What this is (and isn’t)
 
-```
-AI Client (Claude Desktop, Cursor)
-    ↕ JSON-RPC 2.0
-MCP Server (this project - provides search_file tool)
-    ↕
-File System (searches files)
-```
+- Is: an MCP server that returns context/results from a file search tool
+- Isn’t: a model/LLM. The model lives in the MCP client (Cursor, Claude)
 
-**Important**: The AI model runs in the client, not in this server. This server only provides the `search_file` tool.
-
-## Features
-
-- ✅ **Full-text search** - Search for keywords or patterns in files
-- ✅ **Regular expressions** - Advanced pattern matching with regex
-- ✅ **Case-insensitive search** - Optional case-insensitive matching
-- ✅ **Context lines** - Include surrounding lines (0-100 lines) around matches
-- ✅ **Large file support** - Streaming for files >10MB, in-memory for smaller files
-- ✅ **Security** - Path validation and workspace root restrictions
-- ✅ **Binary detection** - Automatically skips binary files
-- ✅ **Dual transport** - HTTP (for web clients) and stdio (for desktop apps)
-
-## Installation
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) installed (v1.0+)
-
-### Setup
+## Install
 
 ```bash
-# Clone or navigate to project directory
-cd mcp-search-server
-
-# Install dependencies
 bun install
 ```
 
-## Usage
+## Run
 
-### Method 1: MCP Server (for AI Clients)
-
-#### Start Server (HTTP Mode)
-
+HTTP mode (default):
 ```bash
+bun run start   # http://localhost:3000/mcp
+```
+
+stdio mode (for Cursor/Claude):
+```bash
+export MCP_TRANSPORT=stdio        # macOS/Linux
+$env:MCP_TRANSPORT="stdio"       # Windows PowerShell
 bun run start
 ```
 
-Server runs on `http://localhost:3000/mcp`
-
-#### Start Server (stdio Mode - for Claude Desktop/Cursor)
-
+Optional: restrict file access to a workspace root
 ```bash
-# Set environment variable
-export MCP_TRANSPORT=stdio  # Linux/Mac
-$env:MCP_TRANSPORT="stdio"  # PowerShell
-
-# Start server
-bun run start
+export WORKSPACE_ROOT=/path/to/project
 ```
 
-#### Setup MCP in Cursor IDE
+## Use in Cursor (recommended)
 
-##### Step 1: Locate MCP Configuration File
+1) Create or edit your MCP config
+- Windows: `%APPDATA%\Cursor\mcp.json`
+- macOS: `~/.cursor/mcp.json`
+- Linux: `~/.config/Cursor/mcp.json`
 
-**Windows:**
-- Path: `%APPDATA%\Cursor\mcp.json` (typically `C:\Users\<YourUsername>\AppData\Roaming\Cursor\mcp.json`)
-- Open PowerShell and run: `code $env:APPDATA\Cursor\mcp.json`
-
-**macOS:**
-- Path: `~/.cursor/mcp.json`
-- Open Terminal and run: `code ~/.cursor/mcp.json`
-
-**Linux:**
-- Path: `~/.config/Cursor/mcp.json`
-- Open Terminal and run: `code ~/.config/Cursor/mcp.json`
-
-**Note**: If the file doesn't exist, create it with the structure below.
-
-##### Step 2: Add Server Configuration
-
-Open `mcp.json` and add/update the configuration:
-
+2) Add the server
 ```json
 {
   "mcpServers": {
     "search-server": {
-      "command": "C:\\Users\\CHOUDHURY\\.bun\\bin\\bun.exe",
-      "args": ["D:\\WEBD\\mcp-search-server\\src\\server.ts"],
+      "command": "bun",
+      "args": ["run", "D:\\WEBD\\mcp-search-server\\src\\server.ts"],
       "cwd": "D:\\WEBD\\mcp-search-server",
       "env": {
         "MCP_TRANSPORT": "stdio",
@@ -112,236 +66,117 @@ Open `mcp.json` and add/update the configuration:
 }
 ```
 
-**Important Configuration Notes:**
-- `command`: Full path to `bun.exe` (or `bun` if in PATH)
-  - Windows: `C:\\Users\\<YourUsername>\\.bun\\bin\\bun.exe`
-  - macOS/Linux: `bun` (if installed globally) or full path to binary
-- `args`: Path to `src/server.ts` (use absolute path)
-- `cwd`: Project root directory (must match `WORKSPACE_ROOT`)
-- `WORKSPACE_ROOT`: Directory where your files are located (paths will be relative to this)
+3) Restart Cursor and ask:
+- “What MCP tools are available?” → should list `search_file`
+- “Search for ‘keyword’ in `samples/sample.txt` with 2 lines of context”
 
-##### Step 3: Restart Cursor
+Tips
+- Use paths relative to `WORKSPACE_ROOT`
+- Ask for context: “with 2 lines of context”
 
-After saving `mcp.json`, **restart Cursor completely** to load the MCP server.
-
-##### Step 4: Verify MCP Connection
-
-1. Open Cursor and start a chat session
-2. Check if MCP tools are available by asking: *"What MCP tools are available?"*
-3. You should see `search_file` listed as an available tool
-
-#### Using MCP Search in Cursor
-
-Once configured, you can use the search tool in your Cursor chat:
-
-**Example Prompts:**
-
-1. **Basic Search:**
-   ```
-   Search for "function" in src/server.ts
-   ```
-
-2. **Case-Insensitive Search:**
-   ```
-   Find all occurrences of "keyword" (case-insensitive) in samples/sample.txt with 2 lines of context
-   ```
-
-3. **Regex Search:**
-   ```
-   Search for function definitions using regex pattern "function.*\(" in src/search.ts
-   ```
-
-4. **Multi-file Search:**
-   ```
-   Search for "export" in all TypeScript files in the src directory
-   ```
-
-**How It Works:**
-
-- Cursor's AI automatically calls the `search_file` tool when you ask to search files
-- The tool searches files within your `WORKSPACE_ROOT` directory
-- Results include line numbers and optional context lines
-- The AI uses search results to answer your questions
-
-**Tips:**
-- Be specific about file paths (relative to workspace root)
-- Request context lines for better understanding: *"with 3 lines of context"*
-- Use natural language - Cursor will translate to tool calls automatically
-- Check Cursor's MCP logs if tools aren't working (View → Output → MCP)
-
-#### Configure Claude Desktop
-
-Add to `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "search-server": {
-      "command": "bun",
-      "args": ["run", "/path/to/mcp-search-server/src/server.ts"],
-      "cwd": "/path/to/mcp-search-server",
-      "env": {
-        "MCP_TRANSPORT": "stdio",
-        "WORKSPACE_ROOT": "/path/to/mcp-search-server"
-      }
-    }
-  }
-}
-```
-
-### Method 2: CLI Tool (Direct Usage)
-
-Search files directly without MCP:
+## CLI usage (direct, no MCP)
 
 ```bash
-# Basic search
+# basic
 bun run cli -- samples/sample.txt keyword
 
-# Case-insensitive search with context
+# case-insensitive with context
 bun run cli -- samples/sample.txt keyword -i -c 2
 
-# Regex search
+# regex
 bun run cli -- samples/sample.txt "function.*\(" -r
-
-# Limit results
-bun run cli -- samples/sample.txt keyword -m 10
 ```
 
-#### CLI Options
+Options
+- `-r, --regex` enable regex
+- `-i, --insensitive` case-insensitive
+- `-c N, --context N` context lines (0–100)
+- `-m N, --max N` max results (1–100000)
 
-- `--regex` or `-r` - Enable regular expression matching
-- `--insensitive` or `-i` - Case-insensitive search
-- `--context N` or `-c N` - Show N lines before/after matches (0-100)
-- `--max N` or `-m N` - Maximum results to return (1-100000)
+## MCP Inspector Demo
 
-## Search Tool API
+Here's how to test the tool using MCP Inspector:
 
-The `search_file` tool accepts:
+1. **Install MCP Inspector** (if not already installed):
+   ```bash
+   npm install -g @modelcontextprotocol/inspector
+   ```
 
-```typescript
-{
-  path: string;           // File path (relative to workspace root)
-  keyword: string;        // Search term or regex pattern
-  options?: {
-    regex?: boolean;      // Enable regex (default: false)
-    insensitive?: boolean; // Case-insensitive (default: false)
-    context?: number;     // Context lines (0-100, default: 0)
-    maxResults?: number;  // Max results (1-100000, default: 1000)
-  }
-}
-```
+2. **Start your server**:
+   ```bash
+   bun run start
+   ```
 
-Returns matches with line numbers and optional context:
+3. **Run MCP Inspector**:
+   ```bash
+   mcp-inspector http://localhost:3000/mcp
+   ```
 
+4. **Test the tool**:
+   - Select `search_file` from the tools list
+   - Use this sample input:
+     ```json
+     {
+       "path": "samples/sample.txt",
+       "keyword": "keyword",
+       "options": {
+         "insensitive": true,
+         "context": 2
+       }
+     }
+     ```
+   - Click "Call Tool" to see the results
+
+![MCP Inspector Screenshot](docs/mcp-inspector-screenshot.png)
+
+*Note: Add a screenshot showing the MCP Inspector interface with the tool call and results*
+
+## Tool API (search_file)
+
+Input
 ```json
 {
-  "matches": [
-    {
-      "line": 13,
-      "text": "keyword appears multiple times in this file.",
-      "pre": ["Line 11", "Line 12"],
-      "post": ["Line 14", "Line 15"]
-    }
-  ],
-  "meta": {
-    "path": "samples/sample.txt",
-    "keyword": "keyword",
-    "count": 1,
-    "durationMs": 5
+  "path": "samples/sample.txt",
+  "keyword": "keyword",
+  "options": {
+    "regex": false,
+    "insensitive": true,
+    "context": 2,
+    "maxResults": 1000
   }
 }
 ```
 
-## Examples
-
-### Example 1: Search for function definitions
-
-```bash
-bun run cli -- src/server.ts "function.*\(" -r -c 3
+Output (content[0].text contains JSON)
+```json
+{
+  "matches": [ { "line": 13, "text": "..." } ],
+  "meta": { "path": "samples/sample.txt", "keyword": "keyword", "count": 1, "durationMs": 5 }
+}
 ```
 
-### Example 2: Case-insensitive keyword search
+## Test
 
 ```bash
-bun run cli -- samples/sample.txt keyword -i -c 2
-```
-
-### Example 3: Find all numbers
-
-```bash
-bun run cli -- src/search.ts "\d+" -r
-```
-
-## Testing
-
-```bash
-# Run all tests
 bun test
-
-# Run specific test file
-bun test tests/search.test.ts
 ```
 
-## Project Structure
+## Project layout
 
 ```
-mcp-search-server/
-├── src/
-│   ├── server.ts      # MCP server implementation
-│   ├── search.ts      # Core search functionality
-│   └── types/         # TypeScript type definitions
-├── bin/
-│   └── search-cli.ts  # CLI tool
-├── tests/             # Test files
-├── samples/           # Sample files for testing
-└── package.json       # Dependencies and scripts
+src/
+  server.ts   # MCP server + transport
+  search.ts   # search engine (streaming + in-memory)
+bin/
+  search-cli.ts
+samples/
+tests/
 ```
-
-## Limitations
-
-- Maximum file size: 100MB (configurable)
-- Binary files are automatically skipped
-- Paths must be within the workspace root (security feature)
-- Streaming mode doesn't support post-context for very large files
 
 ## Troubleshooting
 
-### General Issues
+- “File not found” → use paths inside `WORKSPACE_ROOT` and relative to it
+- “Access denied: Path must be within workspace root” → fix `WORKSPACE_ROOT`
+- Cursor doesn’t show tools → restart Cursor, check MCP logs (View → Output → MCP)
 
-**Path not found errors**: Ensure the server is running from the correct directory or set `WORKSPACE_ROOT` environment variable.
-
-**MCP connection issues**: Restart Cursor/Claude Desktop after changing MCP configuration.
-
-**Port already in use**: Change the port via `PORT` environment variable: `PORT=3001 bun run start`
-
-### Cursor-Specific Issues
-
-**MCP server not connecting:**
-1. Verify `mcp.json` syntax is valid JSON (use a JSON validator)
-2. Check that `bun.exe` path is correct (Windows: use double backslashes `\\`)
-3. Ensure `WORKSPACE_ROOT` matches your actual project directory
-4. Restart Cursor completely (not just reload window)
-5. Check MCP logs: View → Output → Select "MCP" from dropdown
-
-**Tools not appearing in chat:**
-- Ask Cursor: *"What tools are available?"* to see if MCP tools are loaded
-- Check if server started successfully in MCP logs
-- Verify `MCP_TRANSPORT=stdio` is set in environment variables
-
-**Search returns "File not found":**
-- File paths must be relative to `WORKSPACE_ROOT`
-- Example: If `WORKSPACE_ROOT` is `D:\WEBD\mcp-search-server`, use `samples/sample.txt` not `D:\WEBD\mcp-search-server\samples\sample.txt`
-- Ensure file exists within workspace root directory
-
-**"Access denied: Path must be within workspace root":**
-- Verify `WORKSPACE_ROOT` environment variable matches your `cwd` in `mcp.json`
-- Paths outside the workspace root are blocked for security
-
-**Server crashes or errors:**
-- Check Bun is installed: `bun --version`
-- Verify TypeScript files compile: `bun run src/server.ts`
-- Check MCP logs for detailed error messages
-
-## License
-
-MIT
+License: MIT
