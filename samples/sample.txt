@@ -1,4 +1,120 @@
-This is a sample file.
-It contains a keyword on this line: keyword
-Another line with Keyword to test case.
-End of sample.
+This is a sample file for testing the MCP search server.
+It contains various keywords and patterns that can be used for testing search functionality.
+
+Section 1: Introduction
+======================
+This file demonstrates the capabilities of the search_file tool.
+The tool can search for keywords, patterns, and regular expressions.
+It supports case-sensitive and case-insensitive searches.
+Context lines can be included around matches for better understanding.
+
+Section 2: Keywords to Search
+=============================
+keyword appears multiple times in this file.
+Keyword with capital K also appears here.
+The word "keyword" is used throughout this document.
+You can search for KEYWORD in uppercase too.
+
+Section 3: Programming Examples
+=================================
+Here's a JavaScript function example:
+function searchFile(path, keyword) {
+    const matches = [];
+    const content = fs.readFileSync(path, 'utf8');
+    const lines = content.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(keyword)) {
+            matches.push({ line: i + 1, text: lines[i] });
+        }
+    }
+    
+    return matches;
+}
+
+Here's a Python example:
+def search_file(path, keyword):
+    matches = []
+    with open(path, 'r') as f:
+        for line_num, line in enumerate(f, 1):
+            if keyword in line:
+                matches.append({
+                    'line': line_num,
+                    'text': line.strip()
+                })
+    return matches
+
+Section 4: Configuration Examples
+==================================
+The server can be configured with various options:
+- regex: Enable regular expression pattern matching
+- insensitive: Enable case-insensitive search
+- context: Number of context lines around matches (0-100)
+- maxResults: Maximum number of results to return (1-100000)
+
+Section 5: More Keywords
+=========================
+Another keyword appears here.
+And yet another keyword in this line.
+The keyword "keyword" is really common in this file.
+Keyword variations: keyword, Keyword, KEYWORD, keyWord.
+
+Section 6: Testing Scenarios
+=============================
+To test regex patterns, try searching for:
+- "function.*\(\)" to find function definitions
+- "\d+" to find numbers
+- "[A-Z][a-z]+" to find capitalized words
+
+To test case-insensitive search:
+- Search for "keyword" with insensitive=true
+- Should match: keyword, Keyword, KEYWORD, keyWord
+
+To test context lines:
+- Search for "keyword" with context=2
+- Should show 2 lines before and after each match
+
+Section 7: Edge Cases
+======================
+Empty lines can be found too.
+    Lines with indentation.
+Lines with    multiple    spaces.
+Lines with special characters: !@#$%^&*()
+Lines with numbers: 12345 67890
+Lines with punctuation: Hello, world! How are you?
+
+Section 8: Long Line Content
+============================
+This is a very long line that contains multiple occurrences of the word keyword because keyword is important and keyword appears frequently in this long line that demonstrates how the search tool handles long lines with multiple matches on the same line keyword keyword keyword.
+
+Section 9: Code Snippets
+========================
+```typescript
+interface SearchOptions {
+    regex?: boolean;
+    insensitive?: boolean;
+    context?: number;
+    maxResults?: number;
+}
+```
+
+```json
+{
+    "keyword": "value",
+    "another_keyword": "another_value",
+    "nested": {
+        "keyword": "nested_value"
+    }
+}
+```
+
+Section 10: Final Thoughts
+===========================
+This sample file contains many different types of content.
+It includes keywords, code examples, configuration options, and more.
+The search_file tool should be able to find all occurrences of "keyword".
+Both case-sensitive and case-insensitive searches should work.
+Regular expression searches should work too.
+Context lines help understand where matches occur.
+
+End of sample file.
