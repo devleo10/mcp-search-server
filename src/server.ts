@@ -108,6 +108,14 @@ if (transportMode === 'stdio') {
 } else {
   // HTTP/Streamable HTTP transport
   const app = express();
+  // Ensure Accept header is compatible for Streamable HTTP before any handlers
+  app.use('/mcp', (req, _res, next) => {
+    const acceptHeader = req.headers['accept'];
+    if (!acceptHeader || (typeof acceptHeader === 'string' && !acceptHeader.includes('text/event-stream'))) {
+      req.headers['accept'] = 'application/json, text/event-stream';
+    }
+    next();
+  });
   app.use(express.json());
 
   const port = parseInt(process.env.PORT || '3000');
