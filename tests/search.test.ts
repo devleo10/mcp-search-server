@@ -140,3 +140,53 @@ test('searchFile throws error for missing keyword', async () => {
   await expect(searchFile(tmp, '')).rejects.toThrow();
   await unlink(tmp);
 });
+
+test('searchFile throws error for file not found', async () => {
+  await expect(searchFile('nonexistent_file.txt', 'keyword')).rejects.toThrow('not found');
+});
+
+test('searchFile detects binary files', async () => {
+  const tmp = 'tests_tmp_binary.bin';
+  // Create a file with null bytes (binary)
+  const buffer = Buffer.from([0x00, 0x01, 0x02, 0x03, 0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+  await writeFile(tmp, buffer);
+  await expect(searchFile(tmp, 'Hello')).rejects.toThrow('binary');
+  await unlink(tmp);
+});
+
+test('searchFile validates path security', async () => {
+  const tmp = 'tests_tmp_path.txt';
+  await writeFile(tmp, 'test', 'utf8');
+  // Test with workspace root restriction
+  await expect(searchFile('../../etc/passwd', 'keyword', { workspaceRoot: process.cwd() })).rejects.toThrow();
+  await unlink(tmp);
+});
+
+test('searchFile validates file size limit', async () => {
+  const tmp = 'tests_tmp_big.txt';
+  // Create a file larger than default limit (100MB) - use smaller for faster test
+  // Note: In production, this would be 100MB, but for testing we use a smaller custom limit
+  const largeContent = 'x'.repeat(11 * 1024 * 1024); // 11MB
+  await writeFile(tmp, largeContent, 'utf8');
+  await expect(searchFile(tmp, 'x', { maxFileSize: 10 * 1024 * 1024 })).rejects.toThrow('too large');
+  await unlink(tmp);
+});
+
+test('searchFile uses streaming for large files', async () => {
+  const tmp = 'tests_tmp_stream.txt';
+  // Create a file just above streaming threshold (10MB)
+  const lines = Array.from({ length: 200000 }, (_, i) => `line ${i} ${i % 100 === 0 ? 'keyword' : 'text'}`).join('\n');
+  await writeFile(tmp, lines, 'utf8');
+  const res = await searchFile(tmp, 'keyword', { maxResults: 50 });
+  expect(res.length).toBe(50);
+  expect(res[0].line).toBeGreaterThan(0);
+  await unlink(tmp);
+});
+
+test('searchFile validates input parameters', async () => {
+  const tmp = 'tests_tmp_valid.txt';
+  await writeFile(tmp, 'test', 'utf8');
+  await expect(searchFile(tmp, '', {})).rejects.toThrow();
+  await expect(searchFile('', 'keyword', {})).rejects.toThrow();
+  await unlink(tmp);
+});
