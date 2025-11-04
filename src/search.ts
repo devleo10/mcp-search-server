@@ -7,7 +7,12 @@ export type SearchOptions = {
   maxResults?: number;
 };
 
-export type Match = { line: number; text: string };
+export type Match = {
+  line: number;
+  text: string;
+  pre?: string[];
+  post?: string[];
+};
 
 /**
  * Search a file for a keyword or regular expression.
@@ -22,7 +27,11 @@ export async function searchFile(filePath: string, keyword: string, options: Sea
 
   let re: RegExp;
   if (regex) {
-    re = new RegExp(keyword, insensitive ? 'i' : undefined);
+    try {
+      re = new RegExp(keyword, insensitive ? 'i' : undefined);
+    } catch (err) {
+      throw new Error(`Invalid regex pattern: ${err}`);
+    }
   } else {
     const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     re = new RegExp(esc, insensitive ? 'i' : undefined);
@@ -30,7 +39,11 @@ export async function searchFile(filePath: string, keyword: string, options: Sea
 
   for (let i = 0; i < lines.length; i++) {
     if (re.test(lines[i])) {
-      matches.push({ line: i + 1, text: lines[i] });
+      const pre: string[] = [];
+      const post: string[] = [];
+      for (let p = Math.max(0, i - context); p < i; p++) pre.push(lines[p]);
+      for (let q = i + 1; q <= Math.min(lines.length - 1, i + context); q++) post.push(lines[q]);
+      matches.push({ line: i + 1, text: lines[i], pre, post });
       if (matches.length >= maxResults) break;
     }
   }
