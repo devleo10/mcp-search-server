@@ -1,4 +1,4 @@
-import { searchFile } from '../src/search';
+import { searchFile, type SearchOptions } from '../src/search';
 
 function printUsage() {
   console.error('Usage: bun run bin/search-cli.ts -- <file> <keyword> [--regex|-r] [--insensitive|-i] [--context N|-c N] [--max N|-m N]');
@@ -9,7 +9,7 @@ async function main() {
   if (argv.length < 2) { printUsage(); process.exit(2); }
   const file = argv[0];
   const keyword = argv[1];
-  const opts: { regex?: boolean; insensitive?: boolean; context?: number; maxResults?: number } = {};
+  const opts: SearchOptions = {};
 
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -20,14 +20,15 @@ async function main() {
   }
 
   try {
-    const matches = await searchFile(file, keyword, opts as any);
+    const matches = await searchFile(file, keyword, opts);
     if (!matches || matches.length === 0) {
       console.log('No matches found.');
       return;
     }
     for (const m of matches) console.log(`${m.line}: ${m.text}`);
-  } catch (err: any) {
-    console.error('Error:', err?.message ?? String(err));
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('Error:', errorMessage);
     process.exit(1);
   }
 }
