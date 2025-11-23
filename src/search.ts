@@ -84,7 +84,7 @@ async function searchFileStreaming(
   
   const matches: Match[] = [];
   const lineBuffer: string[] = []; // Sliding window buffer
-  const matchIndices: number[] = []; // Track match positions in buffer
+  const matchData: Array<{ bufferIdx: number; lineNumber: number }> = []; // Track match positions and line numbers
   
   return new Promise((resolve, reject) => {
     const stream = createReadStream(filePath, { encoding: 'utf8', highWaterMark: 64 * 1024 });
@@ -105,9 +105,9 @@ async function searchFileStreaming(
         // Keep buffer size manageable
         if (lineBuffer.length > bufferSize) {
           // Process matches before removing old lines
-          while (matchIndices.length > 0 && matchIndices[0] < lineBuffer.length - bufferSize) {
-            const idx = matchIndices.shift()!;
-            const actualIdx = idx - (lineBuffer.length - bufferSize);
+          while (matchData.length > 0 && matchData[0].bufferIdx < lineBuffer.length - bufferSize) {
+            const match = matchData.shift()!;
+            const actualIdx = match.bufferIdx - (lineBuffer.length - bufferSize);
             const matchLine = lineBuffer[actualIdx];
             
             const pre: string[] = [];
@@ -117,7 +117,7 @@ async function searchFileStreaming(
             }
             
             matches.push({
-              line: lineNumber - (bufferSize - actualIdx),
+              line: match.lineNumber,
               text: matchLine,
               pre: pre.length > 0 ? pre : undefined,
               post: undefined // Post context not available in streaming mode
@@ -128,27 +128,27 @@ async function searchFileStreaming(
           const removeCount = lineBuffer.length - bufferSize;
           lineBuffer.splice(0, removeCount);
           // Adjust match indices
-          for (let i = 0; i < matchIndices.length; i++) {
-            matchIndices[i] -= removeCount;
+          for (let i = 0; i < matchData.length; i++) {
+            matchData[i].bufferIdx -= removeCount;
           }
         }
 
         if (regex.test(line)) {
           matchCount++;
-          matchIndices.push(lineBuffer.length - 1);
+          matchData.push({ bufferIdx: lineBuffer.length - 1, lineNumber });
 
           if (matchCount >= maxResults) {
             stream.destroy();
             // Process remaining matches
-            for (const idx of matchIndices) {
+            for (const match of matchData) {
               const pre: string[] = [];
-              const startIdx = Math.max(0, idx - limitedContext);
-              for (let i = startIdx; i < idx; i++) {
+              const startIdx = Math.max(0, match.bufferIdx - limitedContext);
+              for (let i = startIdx; i < match.bufferIdx; i++) {
                 pre.push(lineBuffer[i]);
               }
               matches.push({
-                line: lineNumber - (lineBuffer.length - idx - 1),
-                text: lineBuffer[idx],
+                line: match.lineNumber,
+                text: lineBuffer[match.bufferIdx],
                 pre: pre.length > 0 ? pre : undefined,
                 post: undefined
               });
@@ -165,27 +165,27 @@ async function searchFileStreaming(
         lineNumber++;
         lineBuffer.push(remaining);
         if (regex.test(remaining)) {
-          matchIndices.push(lineBuffer.length - 1);
+          matchData.push({ bufferIdx: lineBuffer.length - 1, lineNumber });
         }
       }
       
       // Process all remaining matches
-      for (const idx of matchIndices) {
+      for (const match of matchData) {
         const pre: string[] = [];
-        const startIdx = Math.max(0, idx - limitedContext);
-        for (let i = startIdx; i < idx; i++) {
+        const startIdx = Math.max(0, match.bufferIdx - limitedContext);
+        for (let i = startIdx; i < match.bufferIdx; i++) {
           pre.push(lineBuffer[i]);
         }
         
         const post: string[] = [];
-        const endIdx = Math.min(lineBuffer.length - 1, idx + limitedContext);
-        for (let i = idx + 1; i <= endIdx; i++) {
+        const endIdx = Math.min(lineBuffer.length - 1, match.bufferIdx + limitedContext);
+        for (let i = match.bufferIdx + 1; i <= endIdx; i++) {
           post.push(lineBuffer[i]);
         }
         
         matches.push({
-          line: lineNumber - (lineBuffer.length - idx - 1),
-          text: lineBuffer[idx],
+          line: match.lineNumber,
+          text: lineBuffer[match.bufferIdx],
           pre: pre.length > 0 ? pre : undefined,
           post: post.length > 0 ? post : undefined
         });
@@ -277,13 +277,17 @@ export async function searchFile(
   let stats;
   try {
     stats = statSync(normalizedPath);
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`File not found: ${filePath}`);
-    } else if (err.code === 'EACCES') {
-      throw new Error(`Permission denied: ${filePath}`);
+  } catch (err) {
+    if (err && typeof err === 'object' && 'code' in err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      if (nodeErr.code === 'ENOENT') {
+        throw new Error(`File not found: ${filePath}`);
+      } else if (nodeErr.code === 'EACCES') {
+        throw new Error(`Permission denied: ${filePath}`);
+      }
     }
-    throw new Error(`Cannot access file: ${err.message}`);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    throw new Error(`Cannot access file: ${errorMessage}`);
   }
 
   if (!stats.isFile()) {
@@ -304,8 +308,9 @@ export async function searchFile(
   if (regex) {
     try {
       re = new RegExp(keyword, insensitive ? 'i' : undefined);
-    } catch (err: any) {
-      throw new Error(`Invalid regex pattern: ${err.message}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Invalid regex pattern: ${errorMessage}`);
     }
   } else {
     const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
