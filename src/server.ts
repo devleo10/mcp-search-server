@@ -34,41 +34,17 @@ server.registerTool(
     // outputSchema is optional - SDK will infer from return type
   },
   async ({ path, keyword, options = {} }) => {
-    // Validate inputs
-    if (!path || typeof path !== 'string') {
-      throw new Error('path is required and must be a string');
-    }
-
-    if (!keyword || typeof keyword !== 'string') {
-      throw new Error('keyword is required and must be a string');
-    }
-
-    if (keyword.length === 0) {
-      throw new Error('keyword cannot be empty');
-    }
-
+    // Zod schema already validates inputs, so we can trust the types here
     // Build search options
     // Use WORKSPACE_ROOT env var if set, otherwise fall back to process.cwd()
     const workspaceRoot = process.env.WORKSPACE_ROOT || process.cwd();
     const searchOptions: SearchOptions = {
       workspaceRoot,
+      regex: options.regex,
+      insensitive: options.insensitive,
+      context: options.context,
+      maxResults: options.maxResults,
     };
-
-    if (options.regex !== undefined) {
-      searchOptions.regex = options.regex;
-    }
-
-    if (options.insensitive !== undefined) {
-      searchOptions.insensitive = options.insensitive;
-    }
-
-    if (options.context !== undefined) {
-      searchOptions.context = options.context;
-    }
-
-    if (options.maxResults !== undefined) {
-      searchOptions.maxResults = options.maxResults;
-    }
 
     // Execute search
     const start = Date.now();
