@@ -15,8 +15,22 @@ async function main() {
     const a = argv[i];
     if (a === '--regex' || a === '-r') opts.regex = true;
     else if (a === '--insensitive' || a === '-i') opts.insensitive = true;
-    else if ((a === '--context' || a === '-c') && argv[i+1]) { opts.context = Number(argv[++i]); }
-    else if ((a === '--max' || a === '-m') && argv[i+1]) { opts.maxResults = Number(argv[++i]); }
+    else if ((a === '--context' || a === '-c') && argv[i+1]) {
+      const value = Number(argv[++i]);
+      if (isNaN(value) || value < 0) {
+        console.error(`Error: Invalid context value: ${argv[i]}`);
+        process.exit(2);
+      }
+      opts.context = value;
+    }
+    else if ((a === '--max' || a === '-m') && argv[i+1]) {
+      const value = Number(argv[++i]);
+      if (isNaN(value) || value < 1) {
+        console.error(`Error: Invalid max value: ${argv[i]}`);
+        process.exit(2);
+      }
+      opts.maxResults = value;
+    }
   }
 
   try {
