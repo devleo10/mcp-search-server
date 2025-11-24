@@ -40,10 +40,10 @@ server.registerTool(
     const workspaceRoot = process.env.WORKSPACE_ROOT || process.cwd();
     const searchOptions: SearchOptions = {
       workspaceRoot,
-      regex: options.regex,
-      insensitive: options.insensitive,
-      context: options.context,
-      maxResults: options.maxResults,
+      ...(options.regex !== undefined && { regex: options.regex }),
+      ...(options.insensitive !== undefined && { insensitive: options.insensitive }),
+      ...(options.context !== undefined && { context: options.context }),
+      ...(options.maxResults !== undefined && { maxResults: options.maxResults }),
     };
 
     // Execute search
@@ -94,7 +94,12 @@ if (transportMode === 'stdio') {
   });
   app.use(express.json());
 
-  const port = parseInt(process.env.PORT || '3000');
+  const portEnv = process.env.PORT || '3000';
+  const port = parseInt(portEnv, 10);
+  if (isNaN(port) || port < 1 || port > 65535) {
+    console.error(`Error: Invalid port number: ${portEnv}`);
+    process.exit(1);
+  }
 
   app.post('/mcp', async (req: express.Request, res: express.Response) => {
     // Create a new transport for each request to prevent request ID collisions
