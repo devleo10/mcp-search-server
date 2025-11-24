@@ -1,5 +1,5 @@
 import { createReadStream, statSync } from 'fs';
-import { readFile } from 'fs/promises';
+import { readFile, open } from 'fs/promises';
 import { resolve, normalize } from 'path';
 
 export type SearchOptions = {
@@ -28,8 +28,14 @@ const MAX_CONTEXT_LINES = 100; // Limit context lines for memory efficiency
  */
 async function isBinaryFile(filePath: string): Promise<boolean> {
   try {
-    const buffer = await readFile(filePath, { encoding: null });
-    const sample = buffer.slice(0, 512);
+    const fd = await open(filePath, 'r');
+    const buffer = Buffer.alloc(512);
+    const { bytesRead } = await fd.read(buffer, 0, 512, 0);
+    await fd.close();
+    
+    if (bytesRead === 0) return false;
+    
+    const sample = buffer.slice(0, bytesRead);
     // Check for null bytes or high percentage of non-text characters
     const nullBytes = sample.filter(b => b === 0).length;
     if (nullBytes > 0) return true;
@@ -59,11 +65,6 @@ function validatePath(filePath: string, workspaceRoot?: string): string {
     if (!resolvedPath.startsWith(rootPath)) {
       throw new Error(`Access denied: Path must be within workspace root`);
     }
-  }
-
-  // Check for path traversal attempts
-  if (filePath.includes('..') && !resolvedPath.includes('..')) {
-    // This is okay, but log suspicious patterns
   }
 
   return resolvedPath;
