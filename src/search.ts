@@ -49,6 +49,40 @@ async function isBinaryFile(filePath: string): Promise<boolean> {
 }
 
 /**
+ * Build context arrays (pre/post) for a match
+ */
+function buildContext(
+  lines: string[],
+  matchIdx: number,
+  limitedContext: number,
+  includePost: boolean
+): { pre?: string[]; post?: string[] } {
+  const pre: string[] = [];
+  const startIdx = Math.max(0, matchIdx - limitedContext);
+  for (let i = startIdx; i < matchIdx; i++) {
+    pre.push(lines[i]);
+  }
+
+  const result: { pre?: string[]; post?: string[] } = {};
+  if (pre.length > 0) {
+    result.pre = pre;
+  }
+
+  if (includePost) {
+    const post: string[] = [];
+    const endIdx = Math.min(lines.length - 1, matchIdx + limitedContext);
+    for (let i = matchIdx + 1; i <= endIdx; i++) {
+      post.push(lines[i]);
+    }
+    if (post.length > 0) {
+      result.post = post;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Validate and normalize file path for security
  */
 function validatePath(filePath: string, workspaceRoot?: string): string {
@@ -110,18 +144,12 @@ async function searchFileStreaming(
             const match = matchData.shift()!;
             const actualIdx = match.bufferIdx - (lineBuffer.length - bufferSize);
             const matchLine = lineBuffer[actualIdx];
-            
-            const pre: string[] = [];
-            const startIdx = Math.max(0, actualIdx - limitedContext);
-            for (let i = startIdx; i < actualIdx; i++) {
-              pre.push(lineBuffer[i]);
-            }
+            const context = buildContext(lineBuffer, actualIdx, limitedContext, false);
             
             matches.push({
               line: match.lineNumber,
               text: matchLine,
-              pre: pre.length > 0 ? pre : undefined,
-              post: undefined // Post context not available in streaming mode
+              ...context
             });
           }
           
@@ -142,16 +170,11 @@ async function searchFileStreaming(
             stream.destroy();
             // Process remaining matches
             for (const match of matchData) {
-              const pre: string[] = [];
-              const startIdx = Math.max(0, match.bufferIdx - limitedContext);
-              for (let i = startIdx; i < match.bufferIdx; i++) {
-                pre.push(lineBuffer[i]);
-              }
+              const context = buildContext(lineBuffer, match.bufferIdx, limitedContext, false);
               matches.push({
                 line: match.lineNumber,
                 text: lineBuffer[match.bufferIdx],
-                pre: pre.length > 0 ? pre : undefined,
-                post: undefined
+                ...context
               });
             }
             resolve(matches);
@@ -172,23 +195,11 @@ async function searchFileStreaming(
       
       // Process all remaining matches
       for (const match of matchData) {
-        const pre: string[] = [];
-        const startIdx = Math.max(0, match.bufferIdx - limitedContext);
-        for (let i = startIdx; i < match.bufferIdx; i++) {
-          pre.push(lineBuffer[i]);
-        }
-        
-        const post: string[] = [];
-        const endIdx = Math.min(lineBuffer.length - 1, match.bufferIdx + limitedContext);
-        for (let i = match.bufferIdx + 1; i <= endIdx; i++) {
-          post.push(lineBuffer[i]);
-        }
-        
+        const context = buildContext(lineBuffer, match.bufferIdx, limitedContext, true);
         matches.push({
           line: match.lineNumber,
           text: lineBuffer[match.bufferIdx],
-          pre: pre.length > 0 ? pre : undefined,
-          post: post.length > 0 ? post : undefined
+          ...context
         });
       }
       
@@ -219,22 +230,11 @@ async function searchFileInMemory(
 
   for (let i = 0; i < lines.length; i++) {
     if (regex.test(lines[i])) {
-      const pre: string[] = [];
-      const post: string[] = [];
-      
-      for (let p = Math.max(0, i - limitedContext); p < i; p++) {
-        pre.push(lines[p]);
-      }
-      
-      for (let q = i + 1; q <= Math.min(lines.length - 1, i + limitedContext); q++) {
-        post.push(lines[q]);
-      }
-      
+      const context = buildContext(lines, i, limitedContext, true);
       matches.push({
         line: i + 1,
         text: lines[i],
-        pre: pre.length > 0 ? pre : undefined,
-        post: post.length > 0 ? post : undefined
+        ...context
       });
       
       if (matches.length >= maxResults) break;
