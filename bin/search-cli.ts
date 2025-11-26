@@ -16,17 +16,19 @@ async function main() {
     if (a === '--regex' || a === '-r') opts.regex = true;
     else if (a === '--insensitive' || a === '-i') opts.insensitive = true;
     else if ((a === '--context' || a === '-c') && argv[i+1]) {
-      const value = Number(argv[++i]);
+      const rawValue = argv[++i];
+      const value = Number(rawValue);
       if (isNaN(value) || value < 0) {
-        console.error(`Error: Invalid context value: ${argv[i]}`);
+        console.error(`Error: Invalid context value: ${rawValue}`);
         process.exit(2);
       }
       opts.context = value;
     }
     else if ((a === '--max' || a === '-m') && argv[i+1]) {
-      const value = Number(argv[++i]);
+      const rawValue = argv[++i];
+      const value = Number(rawValue);
       if (isNaN(value) || value < 1) {
-        console.error(`Error: Invalid max value: ${argv[i]}`);
+        console.error(`Error: Invalid max value: ${rawValue}`);
         process.exit(2);
       }
       opts.maxResults = value;
