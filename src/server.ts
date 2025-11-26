@@ -40,10 +40,14 @@ server.registerTool(
     const workspaceRoot = process.env.WORKSPACE_ROOT || process.cwd();
     const searchOptions: SearchOptions = {
       workspaceRoot,
-      ...(options.regex !== undefined && { regex: options.regex }),
-      ...(options.insensitive !== undefined && { insensitive: options.insensitive }),
-      ...(options.context !== undefined && { context: options.context }),
-      ...(options.maxResults !== undefined && { maxResults: options.maxResults }),
+      ...Object.fromEntries(
+        Object.entries({
+          regex: options.regex,
+          insensitive: options.insensitive,
+          context: options.context,
+          maxResults: options.maxResults,
+        }).filter(([_, value]) => value !== undefined)
+      ),
     };
 
     // Execute search
